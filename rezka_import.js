@@ -8,14 +8,10 @@ var LIST=[["series","В поиске",2014],["series","Близкие друзь
 var WHERE='book'; // book=Избранное, like=Нравится, wath=Позже
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
 var netFail=0;
-function auth(url){
-  var em=window.rezka_email||Lampa.Storage.get('account_email','')||'';
-  if(em&&url.indexOf('account_email=')<0)url+=(url.indexOf('?')>=0?'&':'?')+'account_email='+encodeURIComponent(em);
-  return url;
-}
-function get(url){return new Promise(function(res){
-  var n=new Lampa.Reguest();
-  n.silent(url,function(j){netFail=0;res(j)},function(){netFail++;res(null)});
+function search(q){return new Promise(function(res){
+  try{
+    Lampa.Api.search({query:q},function(r){netFail=0;res(r)},function(){netFail++;res(null)});
+  }catch(e){netFail++;res(null)}
 })}
 function norm(s){return (s||'').toLowerCase().replace(/ё/g,'е').replace(/[^a-zа-я0-9]+/g,' ').trim()}
 function names(t){
@@ -35,18 +31,20 @@ function best(res,year,nm){
     s+=Math.min(c.popularity||0,100)/200;
     if(s>score){score=s;top=c}
   });
-  return score>=2?top:null; // нужен хотя бы год или точное имя
+  return score>=2?top:null;
+}
+function collect(r,kinds,cand){
+  if(!r)return;
+  kinds.forEach(function(k){
+    var g=r[k];
+    if(g&&g.results)g.results.forEach(function(c){c.__kind=k;cand.push(c)});
+  });
 }
 async function find(type,title,year){
   var kinds=type==='films'?['movie']:['tv','movie'];
-  var cand=[];
-  var ns=names(title);
+  var cand=[],ns=names(title);
   for(var i=0;i<ns.length;i++){
-    for(var k=0;k<kinds.length;k++){
-      var u='search/'+kinds[k]+'?query='+encodeURIComponent(ns[i])+'&language=ru&include_adult=false';
-      var j=await get(auth(Lampa.TMDB.api(u)));
-      if(j&&j.results)j.results.forEach(function(c){c.__kind=kinds[k];cand.push(c)});
-    }
+    collect(await search(ns[i]),kinds,cand);
     var b=best(cand,year,title);
     if(b)return b;
   }
@@ -63,7 +61,7 @@ async function run(email){
     try{
       var c=await find(it[0],it[1],it[2]);
       if(!c){miss.push(it[1]+' ('+it[2]+')');continue}
-      if(c.__kind==='tv'&&!c.name)c.name=c.title;
+      c.media_type=c.__kind;if(c.__kind==='tv'&&!c.name)c.name=c.title;
       if(c.__kind==='tv'&&!c.original_name)c.original_name=c.original_title;
       if(c.__kind==='tv'&&!c.first_air_date)c.first_air_date=c.release_date;
       var st=Lampa.Favorite.check(c);
