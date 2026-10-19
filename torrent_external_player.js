@@ -55,7 +55,15 @@
         return torrserverHosts().indexOf(host) !== -1 && /\/(ts\/)?(stream|play)(\/|\?|$)/i.test(url);
     }
 
+    // &preload у TorrServer только подгружает торрент и не отдаёт видео - для плеера нужен &play
+    function fixStreamUrl(url) {
+        url = url.replace(/([?&])preload(?=&|$)/i, '$1play');
+        if (!/[?&]play(?=&|$)/i.test(url)) url += (url.indexOf('?') === -1 ? '?' : '&') + 'play';
+        return url;
+    }
+
     function buildLink(type, url) {
+        url = fixStreamUrl(url);
         switch (type) {
             case 'vlc':
                 return 'vlc://' + url;
