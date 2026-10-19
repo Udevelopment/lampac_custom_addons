@@ -98,8 +98,32 @@
             try {
                 if (params && shouldHandle(params.url)) {
                     var type = Lampa.Storage.get(KEY_TYPE, defaultType());
-                    openExternal(buildLink(type, params.url));
-                    Lampa.Noty.show('Открываю во внешнем плеере: ' + ({ vlc: 'VLC', potplayer: 'PotPlayer', iina: 'IINA' }[type] || type));
+                    var url = params.url;
+                    var name = { vlc: 'VLC', potplayer: 'PotPlayer', iina: 'IINA' }[type] || type;
+
+                    var launch = function () {
+                        openExternal(buildLink(type, url));
+                        Lampa.Noty.show('Открываю во внешнем плеере: ' + name);
+                    };
+
+                    // Как и штатный плеер Лампы: сначала дожидаемся предзагрузки (&preload), потом отдаём &play
+                    if (/[?&]preload(?=&|$)/i.test(url) && window.fetch) {
+                        Lampa.Noty.show('Подготовка торрента...');
+                        var done = false;
+                        var finish = function () {
+                            if (done) return;
+                            done = true;
+                            launch();
+                        };
+                        var ctrl = window.AbortController ? new AbortController() : null;
+                        var timer = setTimeout(function () {
+                            if (ctrl) ctrl.abort();
+                            finish();
+                        }, 120000);
+                        fetch(url, { mode: 'no-cors', signal: ctrl ? ctrl.signal : undefined })
+                            .then(function () { clearTimeout(timer); finish(); })
+                            .catch(function () { clearTimeout(timer); finish(); });
+                    } else launch();
                     return;
                 }
             } catch (e) {
