@@ -30,6 +30,9 @@
     var KEY_PASS = 'lampac_ts_password';
 
     function isApp() {
+        // Lampa Desktop (Electron): preload отдаёт window.electronAPI, платформа на macOS может определиться иначе
+        if (window.electronAPI) return true;
+
         var p = '';
         try { p = Lampa.Platform.get(); } catch (e) { }
         if (p === 'browser') return false;
@@ -235,9 +238,9 @@
         try { plat = Lampa.Platform.get(); } catch (e) { }
 
         note('платформа=' + (plat || 'пусто') + ', страница=' + location.href.slice(0, 40));
-        Lampa.Noty.show('Lampac TS plugin: платформа=' + (plat || 'пусто'));
+        Lampa.Noty.show('Lampac TS plugin: платформа=' + (plat || 'пусто') + (window.electronAPI ? ', Lampa Desktop' : ''));
 
-        if (plat !== 'browser') addStatus();
+        if (plat !== 'browser' || window.electronAPI) addStatus();
 
         if (!isApp()) {
             note('пропущено: это браузер');
