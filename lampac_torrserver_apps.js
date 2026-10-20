@@ -116,7 +116,7 @@
         probe(list, unic_id, function (host, info) {
             if (!host) {
                 Lampa.Noty.show('Lampac TorrServer: сервер не найден, укажите адрес в настройках TorrServer' +
-                    (list.length ? ' (проверено: ' + list.join(', ') + ')' : ''));
+                    ' | страница: ' + location.href.slice(0, 60) + (list.length ? ' | проверено: ' + list.join(', ') : ' | кандидатов нет'));
                 return;
             }
 
