@@ -18,6 +18,13 @@
         try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
     }
 
+    // Журнал работы плагина, виден в настройках TorrServer (пункт "Статус плагина")
+    var LOG = [];
+    function note(msg) {
+        LOG.push(msg);
+        try { Lampa.Storage.set('lampac_ts_status', LOG.slice(-8).join(' | ')); } catch (e) { }
+    }
+
     var KEY_ENABLE = 'lampac_ts_autoset';
     var KEY_HOST = 'lampac_ts_host';
     var KEY_PASS = 'lampac_ts_password';
@@ -140,6 +147,7 @@
 
         applyAuth(tsUrl, login);
 
+        note('применено: ' + tsUrl + ', вход по паролю=' + Lampa.Storage.get('torrserver_auth', ''));
         Lampa.Noty.show('Lampac TorrServer: ' + tsUrl);
     }
 
@@ -153,9 +161,11 @@
         }
 
         var list = candidates();
+        note('кандидаты: ' + (list.join(', ') || 'нет') + (hostFromSelf() ? ', host в ссылке=' + hostFromSelf() : ', host в ссылке нет'));
 
         probe(list, unic_id, function (host, info) {
-            if (host) return apply(host, info.user_uid);
+            if (host) { note('reqinfo ок: ' + host); return apply(host, info.user_uid); }
+            note('reqinfo не ответил');
 
             // /reqinfo недоступен (например, смешанный http/https): берём адрес без проверки
             var manual = normalizeHost(Lampa.Storage.get(KEY_HOST, '')) || normalizeHost(hostFromSelf());
@@ -163,6 +173,7 @@
 
             if (guess) return apply(guess, unic_id);
 
+            note('сервер не найден');
             Lampa.Noty.show('Lampac TorrServer: сервер не найден, укажите адрес в настройках TorrServer' +
                 ' | страница: ' + location.href.slice(0, 60) + (list.length ? ' | проверено: ' + list.join(', ') : ' | кандидатов нет'));
         });
@@ -200,8 +211,30 @@
         });
     }
 
+    function addStatus() {
+        Lampa.SettingsApi.addParam({
+            component: 'server',
+            param: { name: 'lampac_ts_status_item', type: 'static' },
+            field: { name: 'Статус плагина Lampac TorrServer', description: '...' },
+            onRender: function (item) {
+                var text = Lampa.Storage.get('lampac_ts_status', '') || 'плагин не запускался';
+                item.find('.settings-param__descr').text(text);
+            }
+        });
+    }
+
     function start() {
-        if (!isApp()) return;
+        var plat = '';
+        try { plat = Lampa.Platform.get(); } catch (e) { }
+
+        note('платформа=' + (plat || 'пусто') + ', страница=' + location.href.slice(0, 40));
+
+        if (plat !== 'browser') addStatus();
+
+        if (!isApp()) {
+            note('пропущено: это браузер');
+            return;
+        }
 
         addSettings();
         run();
