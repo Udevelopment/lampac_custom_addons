@@ -224,10 +224,18 @@
     }
 
     function start() {
+        try { startInner(); } catch (e) {
+            try { Lampa.Noty.show('Lampac TS plugin: ошибка ' + (e && e.message)); } catch (e2) { }
+            console.log('lampac_torrserver_apps', e);
+        }
+    }
+
+    function startInner() {
         var plat = '';
         try { plat = Lampa.Platform.get(); } catch (e) { }
 
         note('платформа=' + (plat || 'пусто') + ', страница=' + location.href.slice(0, 40));
+        Lampa.Noty.show('Lampac TS plugin: платформа=' + (plat || 'пусто'));
 
         if (plat !== 'browser') addStatus();
 
