@@ -33,6 +33,9 @@
         // Lampa Desktop (Electron): preload отдаёт window.electronAPI, платформа на macOS может определиться иначе
         if (window.electronAPI) return true;
 
+        // macOS: запускаем всегда, даже в браузере
+        if (/Macintosh|Mac OS X/i.test(navigator.userAgent || '')) return true;
+
         var p = '';
         try { p = Lampa.Platform.get(); } catch (e) { }
         if (p === 'browser') return false;
