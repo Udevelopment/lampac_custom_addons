@@ -53,6 +53,17 @@
             }
         } catch (e) { }
 
+        // Приложение, открытое прямо с сервера Lampac
+        if (/^https?:$/i.test(location.protocol) && location.host && !/github\.io$/i.test(location.hostname)) {
+            return location.origin;
+        }
+
+        // Ссылка TorrServer, которую уже подставляли раньше или ввели вручную в виде <сервер>/ts
+        var saved = [Lampa.Storage.get('lampac_torrserver_url', ''), Lampa.Storage.get('torrserver_url', '')];
+        for (i = 0; i < saved.length; i++) {
+            if (/\/ts\/?$/i.test(saved[i] || '')) return originOf(saved[i]);
+        }
+
         return '';
     }
 
@@ -73,7 +84,10 @@
         if (!Lampa.Storage.field(KEY_ENABLE)) return;
 
         var host = detectHost();
-        if (!host) return;
+        if (!host) {
+            Lampa.Noty.show('Lampac TorrServer: адрес сервера не определён, укажите его в настройках TorrServer');
+            return;
+        }
 
         var unic_id = Lampa.Storage.get('lampac_unic_id', '');
         if (!unic_id) {
@@ -103,6 +117,7 @@
         Lampa.SettingsApi.addParam({
             component: 'server',
             param: { name: KEY_ENABLE, type: 'trigger', default: true },
+            onChange: run,
             field: {
                 name: 'Автоподстановка TorrServer от Lampac',
                 description: 'В приложении подставлять адрес, логин и пароль TorrServer с вашего сервера Lampac'
@@ -111,7 +126,8 @@
 
         Lampa.SettingsApi.addParam({
             component: 'server',
-            param: { name: KEY_HOST, type: 'input', values: '', default: '' },
+            param: { name: KEY_HOST, type: 'input', values: '', default: '', placeholder: 'Определяется автоматически' },
+            onChange: run,
             field: {
                 name: 'Адрес Lampac',
                 description: 'Например http://192.168.1.220:9118. Пусто: определяется автоматически'
@@ -120,7 +136,8 @@
 
         Lampa.SettingsApi.addParam({
             component: 'server',
-            param: { name: KEY_PASS, type: 'input', values: '', default: 'ts' },
+            param: { name: KEY_PASS, type: 'input', values: '', default: 'ts', placeholder: 'ts' },
+            onChange: run,
             field: {
                 name: 'Пароль TorrServer Lampac',
                 description: 'Значение defaultPasswd в секции TorrServer, по умолчанию ts'
