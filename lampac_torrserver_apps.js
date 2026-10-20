@@ -8,6 +8,16 @@
     if (window.plugin_lampac_torrserver_apps) return;
     window.plugin_lampac_torrserver_apps = true;
 
+    // Адрес Lampac можно передать прямо в ссылке плагина: .../lampac_torrserver_apps.js?host=http://192.168.1.220:9118
+    var SELF_SRC = '';
+    try { SELF_SRC = (document.currentScript && document.currentScript.src) || ''; } catch (e) { }
+
+    function hostFromSelf() {
+        var m = SELF_SRC.match(/[?&]host=([^&#]+)/i);
+        if (!m) return '';
+        try { return decodeURIComponent(m[1]); } catch (e) { return m[1]; }
+    }
+
     var KEY_ENABLE = 'lampac_ts_autoset';
     var KEY_HOST = 'lampac_ts_host';
     var KEY_PASS = 'lampac_ts_password';
@@ -56,6 +66,7 @@
         }
 
         addPlain(normalizeHost(Lampa.Storage.get(KEY_HOST, '')));
+        addPlain(normalizeHost(hostFromSelf()));
 
         var i, src;
         var scripts = document.getElementsByTagName('script');
@@ -147,7 +158,7 @@
             if (host) return apply(host, info.user_uid);
 
             // /reqinfo недоступен (например, смешанный http/https): берём адрес без проверки
-            var manual = normalizeHost(Lampa.Storage.get(KEY_HOST, ''));
+            var manual = normalizeHost(Lampa.Storage.get(KEY_HOST, '')) || normalizeHost(hostFromSelf());
             var guess = manual || (list.likely && list.likely[0]) || '';
 
             if (guess) return apply(guess, unic_id);
