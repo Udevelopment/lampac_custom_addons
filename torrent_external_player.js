@@ -168,7 +168,27 @@
         });
     }
 
+    // Плагин нужен только в обычном браузере, а не в приложениях и на ТВ
+    function isWebBrowser() {
+        var native = ['android', 'tizen', 'webos', 'orsay', 'netcast', 'apple_tv', 'nw', 'electron', 'browser_extension'];
+
+        try {
+            for (var i = 0; i < native.length; i++) {
+                if (Lampa.Platform.is(native[i])) return false;
+            }
+        } catch (e) { }
+
+        if (window.AndroidJS || window.Android || window.webOS || window.tizen) return false;
+
+        var v = (typeof process !== 'undefined' && process.versions) || null;
+        if (v && (v.electron || v.nw)) return false;
+
+        return true;
+    }
+
     function start() {
+        if (!isWebBrowser()) return;
+
         addSettings();
         hookPlayer();
     }
