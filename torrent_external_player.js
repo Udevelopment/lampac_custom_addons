@@ -168,20 +168,16 @@
         });
     }
 
-    // Плагин нужен только в обычном браузере, а не в приложениях и на ТВ
+    // Плагин нужен только в обычном браузере, а не в приложениях и на ТВ.
+    // Платформы Lampa (platform.js): webos, tizen, android, philips, apple_tv, apple, nw, electron, netcast, orsay,
+    // browser (Windows/macOS без тача) или '' (прочие браузеры)
     function isWebBrowser() {
-        var native = ['android', 'tizen', 'webos', 'orsay', 'netcast', 'apple_tv', 'nw', 'electron', 'browser_extension'];
-
         try {
-            for (var i = 0; i < native.length; i++) {
-                if (Lampa.Platform.is(native[i])) return false;
-            }
+            if (Lampa.Platform.is(['webos', 'tizen', 'android', 'philips', 'apple_tv', 'netcast', 'orsay', 'nw', 'electron'])) return false;
+            if (Lampa.Platform.tv()) return false;
         } catch (e) { }
 
-        if (window.AndroidJS || window.Android || window.webOS || window.tizen) return false;
-
-        var v = (typeof process !== 'undefined' && process.versions) || null;
-        if (v && (v.electron || v.nw)) return false;
+        if (window.AndroidJS) return false;
 
         return true;
     }
