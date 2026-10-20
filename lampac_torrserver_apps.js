@@ -3,7 +3,7 @@
 
     // Подставляет адрес, логин и пароль TorrServer из Lampac в приложениях Lampa (ТВ, Android и т.д.),
     // так же как это делает штатный плагин ts.js в веб-версии.
-    // Не запускается только в браузере на Windows/macOS (платформа browser); во всех остальных клиентах работает.
+    // Не запускается в браузерах (веб-версия, там работает штатный ts.js), только в приложениях.
 
     if (window.plugin_lampac_torrserver_apps) return;
     window.plugin_lampac_torrserver_apps = true;
@@ -15,7 +15,12 @@
     function isApp() {
         var p = '';
         try { p = Lampa.Platform.get(); } catch (e) { }
-        return p !== 'browser';
+        if (p === 'browser') return false;
+
+        // Неопознанный клиент (платформа пустая): обычная веб-страница с сервера - это браузер, не приложение
+        if (!p && /^https?:$/i.test(location.protocol) && !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(location.hostname)) return false;
+
+        return true;
     }
 
     function normalizeHost(h) {
