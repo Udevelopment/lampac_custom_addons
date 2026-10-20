@@ -128,8 +128,11 @@
             var tsUrl = host + '/ts';
             var cur = Lampa.Storage.get('torrserver_url', '');
 
-            // Основная ссылка наша, пока пользователь не заменил её своей
-            if (!cur || cur == tsUrl || cur == Lampa.Storage.get('lampac_torrserver_url', '')) {
+            // Основная ссылка наша, пока пользователь не заменил её своей (не локальной и не нашей)
+            // Локальный адрес (например, http://localhost:8090, который Lampa Desktop ставит по умолчанию) тоже считаем заменяемым
+            var isLocal = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(cur);
+
+            if (!cur || isLocal || cur == tsUrl || cur == Lampa.Storage.get('lampac_torrserver_url', '')) {
                 Lampa.Storage.set('torrserver_url', tsUrl);
                 Lampa.Storage.set('lampac_torrserver_url', tsUrl);
             }
