@@ -40,21 +40,28 @@
     // Кандидаты на адрес Lampac: настройка, затем адреса уже загруженных скриптов и плагинов
     function candidates() {
         var list = [];
+        var likelyRe = /\/(lampainit|privateinit|ts|online|sisi|tracks|sync|timecode|dlna|lampac|jac|jacred)(\.js|\/js\/|\/|$)/i;
+        list.likely = [];
 
-        function add(o) {
+        function add(o, url) {
+            if (o && url && likelyRe.test(url) && list.likely.indexOf(o) === -1) list.likely.push(o);
+            addPlain(o);
+        }
+
+        function addPlain(o) {
             if (!o || list.indexOf(o) !== -1) return;
             var host = o.replace(/^https?:\/\//i, '').replace(/:\d+$/, '');
             if (SKIP.test(host)) return;
             list.push(o);
         }
 
-        add(normalizeHost(Lampa.Storage.get(KEY_HOST, '')));
+        addPlain(normalizeHost(Lampa.Storage.get(KEY_HOST, '')));
 
         var i, src;
         var scripts = document.getElementsByTagName('script');
         for (i = 0; i < scripts.length; i++) {
             src = scripts[i].src;
-            if (/^https?:/i.test(src)) add(originOf(src));
+            if (/^https?:/i.test(src)) add(originOf(src), src);
         }
 
         try {
@@ -62,15 +69,15 @@
             if (typeof plugins === 'string') plugins = JSON.parse(plugins);
             for (i = 0; i < plugins.length; i++) {
                 src = plugins[i] && plugins[i].url;
-                if (/^https?:/i.test(src || '')) add(originOf(src));
+                if (/^https?:/i.test(src || '')) add(originOf(src), src);
             }
         } catch (e) { }
 
-        if (/^https?:$/i.test(location.protocol) && location.host) add(location.origin);
+        if (/^https?:$/i.test(location.protocol) && location.host) addPlain(location.origin);
 
         ['lampac_torrserver_url', 'torrserver_url', 'torrserver_url_two'].forEach(function (k) {
             var v = Lampa.Storage.get(k, '');
-            if (/\/ts\/?$/i.test(v || '')) add(originOf(v));
+            if (/\/ts\/?$/i.test(v || '')) add(originOf(v), v);
         });
 
         return list;
@@ -107,6 +114,24 @@
         });
     }
 
+    function apply(host, login) {
+        var tsUrl = host + '/ts';
+        var cur = Lampa.Storage.get('torrserver_url', '');
+
+        // Локальный адрес (например, http://localhost:8090, который Lampa Desktop ставит по умолчанию) тоже считаем заменяемым
+        var isLocal = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(cur);
+
+        // Основная ссылка наша, пока пользователь не заменил её своей (не локальной и не нашей)
+        if (!cur || isLocal || cur == tsUrl || cur == Lampa.Storage.get('lampac_torrserver_url', '')) {
+            Lampa.Storage.set('torrserver_url', tsUrl);
+            Lampa.Storage.set('lampac_torrserver_url', tsUrl);
+        }
+
+        applyAuth(tsUrl, login);
+
+        Lampa.Noty.show('Lampac TorrServer: ' + tsUrl);
+    }
+
     function run() {
         if (!Lampa.Storage.field(KEY_ENABLE)) return;
 
@@ -119,25 +144,16 @@
         var list = candidates();
 
         probe(list, unic_id, function (host, info) {
-            if (!host) {
-                Lampa.Noty.show('Lampac TorrServer: сервер не найден, укажите адрес в настройках TorrServer' +
-                    ' | страница: ' + location.href.slice(0, 60) + (list.length ? ' | проверено: ' + list.join(', ') : ' | кандидатов нет'));
-                return;
-            }
+            if (host) return apply(host, info.user_uid);
 
-            var tsUrl = host + '/ts';
-            var cur = Lampa.Storage.get('torrserver_url', '');
+            // /reqinfo недоступен (например, смешанный http/https): берём адрес без проверки
+            var manual = normalizeHost(Lampa.Storage.get(KEY_HOST, ''));
+            var guess = manual || (list.likely && list.likely[0]) || '';
 
-            // Основная ссылка наша, пока пользователь не заменил её своей (не локальной и не нашей)
-            // Локальный адрес (например, http://localhost:8090, который Lampa Desktop ставит по умолчанию) тоже считаем заменяемым
-            var isLocal = /^(https?:\/\/)?(localhost|127\.0\.0\.1|\[::1\])(:\d+)?(\/|$)/i.test(cur);
+            if (guess) return apply(guess, unic_id);
 
-            if (!cur || isLocal || cur == tsUrl || cur == Lampa.Storage.get('lampac_torrserver_url', '')) {
-                Lampa.Storage.set('torrserver_url', tsUrl);
-                Lampa.Storage.set('lampac_torrserver_url', tsUrl);
-            }
-
-            applyAuth(tsUrl, info.user_uid);
+            Lampa.Noty.show('Lampac TorrServer: сервер не найден, укажите адрес в настройках TorrServer' +
+                ' | страница: ' + location.href.slice(0, 60) + (list.length ? ' | проверено: ' + list.join(', ') : ' | кандидатов нет'));
         });
     }
 
